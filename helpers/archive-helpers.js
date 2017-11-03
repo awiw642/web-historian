@@ -10,9 +10,9 @@ var _ = require('underscore');
  */
 
 exports.paths = {
-  siteAssets: path.join(__dirname, '../web/public'),
-  archivedSites: path.join(__dirname, '../archives/sites'),
-  list: path.join(__dirname, '../archives/sites.txt')
+  siteAssets: path.join(__dirname, '../web/public'), //Pages to show to the users
+  archivedSites: path.join(__dirname, '../archives/sites'), // Archived the pages
+  list: path.join(__dirname, '../archives/sites.txt') // List of all the requested pages/urls
 };
 
 // Used for stubbing paths for tests, do not modify
@@ -26,12 +26,31 @@ exports.initialize = function(pathsObj) {
 // modularize your code. Keep it clean!
 
 exports.readListOfUrls = function(callback) {
+  // Q: What happen when you read an empty file??
+  fs.readFile(exports.paths.list, 'utf8', function (error, data) {
+    if (error) {
+    }
+    callback(data.split('\n'));
+  });
 };
 
-exports.isUrlInList = function(url, callback) {
+exports.isUrlInList = function(url, callback){
+  exports.readListOfUrls(function (listOfUrls) {
+    if (listOfUrls.indexOf(url) < 0) {
+      callback(false);
+    } else {
+       callback(true);
+    }
+  });
 };
 
 exports.addUrlToList = function(url, callback) {
+  fs.appendFile(exports.paths.list, url, function(error) {
+    if (error) {
+    } else {
+      callback();
+    }
+  });
 };
 
 exports.isUrlArchived = function(url, callback) {
