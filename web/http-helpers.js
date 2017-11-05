@@ -12,33 +12,33 @@ exports.headers = {
 
 
 
-/*exports.serveAssets = function(res, asset, callback) {
-  var statusCode = 200;
-  console.log('PATH: ', archive.paths.siteAssets);
-  fs.readFile(archive.paths.siteAssets + '/index.html', 'utf8',  function(error, data) {
+exports.serveAssets = function(res, asset, callback) {
+  console.log('Asset: ' + asset);
+  fs.readFile(archive.paths.siteAssets + asset, 'utf8', function (error, data) {
     if (error) {
-      throw error;
+      fs.readFile(archive.paths.archivedSites + asset, 'utf8', function (error, data) {
+        if (error) {
+          callback();
+        } else {
+          exports.sendResponse(res, data);
+        }
+      });
     } else {
-      //console.log('Data from serveAssets: ', data);
-      callback(data, statusCode);
+      exports.sendResponse(res, data);
     }
   });
-  // Write some code here that helps serve up your static files!
-  // (Static files are things like html (yours or archived from others...),
-  // css, or anything that doesn't change often.)
-  console.log('ASSET ------------->', asset.url);
-};*/
+};
 
-exports.sendResponse = function(response, data, statusCode = 200) {
-  console.log('Send Response Data: ', data);
-  response.writeHead(statusCode, {'Content-Type': 'text/css'});
-  response.end(data);
-}
+exports.sendRedirect = function (response, location, statusCode = 302) {
+  response.writeHead(statusCode, {Location: location});
+  response.end();
+};
 
-// exports.redirect = function()
-//   resonse.writeHead(302, {
-//     'Location': ''
-//   });
+exports.sendResponse = function(response, obj, statusCode = 200) {
+  response.writeHead(statusCode, exports.headers);
+  response.end(obj);
+};
+
 
 exports.collectData = function(request, callback) {
   var data = '';
@@ -46,9 +46,13 @@ exports.collectData = function(request, callback) {
     data += chunk;
   });
   request.on('end', function() {
-    callback(data.slice(4));
+    callback(data.slice(4).replace('http://', ''));
   });
-}
+};
+
+exports.sendNotFound = function (response) {
+  exports.sendResponse(response, '404: Not Found', 404);
+};
 
 
 // As you progress, keep thinking about what helper functions you can put here!

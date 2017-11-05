@@ -1,52 +1,56 @@
-var path = require('path');
-var archive = require('../helpers/archive-helpers');
-//var helpers = require('./http-helpers');
-var fs = require('fs');
-// require more modules/folders here!
+let path = require('path');
+let archive = require('../helpers/archive-helpers');
+let helpers = require('./http-helpers');
+let url = require('url');
 
+let actions = {
 
+  'GET': (request, response) => {
+    let urlPath = url.parse(request.url).pathname;
 
-var actions = {
-  'GET': function (request, response) {
-    fs.readFile(archive.paths.siteAssets + '/index.html', 'utf8', function (error, data) {
-      console.log('DATA HERE: ', data);
-      console.log('TYPE DATA HERE: ', typeof data);
-      response.writeHead(200);
-      response.end(data);
+    if (urlPath === '/') {
+      urlPath = '/index.html';
+    }
+
+    helpers.serveAssets(response, urlPath, () => {
+      if (urlPath[0] === '/') {
+        urlPath = urlPath.slice(1);
+      }
+
+      archive.isUrlInList(urlPath, (status) => {
+        if (status) {
+          helpers.sendRedirect(response, '/loading.html');
+        } else {
+          helpers.sendNotFound(response);
+        }
+      });
+    });
+  },
+
+  'POST': (request, response) => {
+    helpers.collectData(request, (data) => {
+      archive.isUrlInList(data, (found) => {
+        if (found === true) {
+          archive.isUrlArchived(data, (archived) => {
+            if (archived === true) {
+              helpers.sendRedirect(response, '/' + data);
+            } else {
+              helpers.sendRedirect(response, '/loading.html');
+            }
+          });
+        } else {
+          archive.addUrlToList(data, () => {
+            helpers.sendRedirect(response, '/loading.html');
+          });
+        }
+      });
     });
   }
-
-  /*function(request, response) {
-    helpers.serveAssets(response, request, function (data, statusCode) {
-      console.log('Data: '+ data);
-      console.log('Status Code: ' + statusCode);
-      helpers.sendResponse(response, data, statusCode)
-    });*/
-  //}
-
-  // 'POST': function(request, response) {
-  //   helpers.collectData(request, function(data) {
-  //     archive.isUrlInList(data, function (status) {
-  //       if (status === false) {
-  //         archive.addUrlToList(data, function () {});
-  //       } else {
-  //         fs.readFile('./public/loading.html', function(error, html) {
-  //           helpers.sendResponse(response, html, statusCode = 302);
-  //         });
-  //       }
-  //     });
-  //   });
-  // }
-
-}
-
-
-exports.handleRequest = function (req, res) {
-  actions[req.method](req, res);
-  res.end(archive.paths.list);
 };
 
-
-
-
-
+exports.handleRequest = function (req, res) {
+  var handler = actions[req.method];
+  if (handler) {
+    handler(req, res);
+  }
+};
